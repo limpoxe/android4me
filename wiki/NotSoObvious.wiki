@@ -1,4 +1,4 @@
 #summary Not-so-obvious thigs
 
  * float type
- * preprocessing of XML files
+ * preprocessing of XML files (R file generation)
