@@ -5,7 +5,7 @@
  * Implement most of Android classes & most of methods inside them
  * Make it work reasonably fast
 
-= Plan for near future =
+= Plan =
 
 I propose this pieces of Android to be implemented first:
  * XML & resource parsing:
