@@ -15,7 +15,6 @@
  */
 package android4me.res;
 
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -31,17 +30,14 @@ import org.xmlpull.v1.XmlPullParser;
  * it to Android4ME project. See http://code.google.com/p/android4me
  * 
  * TODO: 
- *  - use StringBlock
- *  - clarify interface methods, 
+ *	* clarify interface methods, 
  *     not all behavior from XmlPullParser is supported
- *  - add more sanity checks
- *  - understand ? values
+ * 	* understand ? values
  */
 public class AXMLParser {
 	
 	public AXMLParser(InputStream stream) {
 		m_stream=stream;
-		m_offset=0;
 		m_started=false;
 	}
 	
@@ -49,10 +45,10 @@ public class AXMLParser {
 	public int next() throws IOException {
 		start();
 		
-		m_tagType=(readInt() & 0xFF);/*other 3 bytes?*/
-		/*some source length*/readInt();
-		m_tagSourceLine=readInt();
-		/*0xFFFFFFFF*/readInt();
+		m_tagType=(ReadUtil.readInt(m_stream) & 0xFF);/*other 3 bytes?*/
+		/*some source length*/ReadUtil.readInt(m_stream);
+		m_tagSourceLine=ReadUtil.readInt(m_stream);
+		/*0xFFFFFFFF*/ReadUtil.readInt(m_stream);
 
 		m_tagName=-1;
 		m_tagAttributes=null;
@@ -60,46 +56,46 @@ public class AXMLParser {
 		switch (m_tagType) {
 			case XmlPullParser.START_DOCUMENT:
 			{
-				/*namespace?*/readInt();
-				/*name?*/readInt();
+				/*namespace?*/ReadUtil.readInt(m_stream);
+				/*name?*/ReadUtil.readInt(m_stream);
 				break;
 			}
 			case XmlPullParser.START_TAG:
 			{
-				/*0xFFFFFFFF*/readInt();
-				m_tagName=readInt();
-				/*flags?*/readInt();
-				int attributeCount=readInt();
-				/*?*/readInt();
+				/*0xFFFFFFFF*/ReadUtil.readInt(m_stream);
+				m_tagName=ReadUtil.readInt(m_stream);
+				/*flags?*/ReadUtil.readInt(m_stream);
+				int attributeCount=ReadUtil.readInt(m_stream);
+				/*?*/ReadUtil.readInt(m_stream);
 				m_tagAttributes=new TagAttribute[attributeCount];
 				for (int i=0;i!=attributeCount;++i) {
 					TagAttribute attribute=new TagAttribute();
-					attribute.namespace=readInt();
-					attribute.name=readInt();
-					attribute.valueString=readInt();
-					attribute.valueType=(readInt()>>>24);/*other 3 bytes?*/
-					attribute.value=readInt();
+					attribute.namespace=ReadUtil.readInt(m_stream);
+					attribute.name=ReadUtil.readInt(m_stream);
+					attribute.valueString=ReadUtil.readInt(m_stream);
+					attribute.valueType=(ReadUtil.readInt(m_stream)>>>24);/*other 3 bytes?*/
+					attribute.value=ReadUtil.readInt(m_stream);
 					m_tagAttributes[i]=attribute;
 				}
 				break;
 			}
 			case XmlPullParser.END_TAG:
 			{
-				/*0xFFFFFFFF*/readInt();
-				m_tagName=readInt();
+				/*0xFFFFFFFF*/ReadUtil.readInt(m_stream);
+				m_tagName=ReadUtil.readInt(m_stream);
 				break;
 			}
 			case XmlPullParser.TEXT:
 			{
-				m_tagName=readInt();
-				/*?*/readInt();
-				/*?*/readInt();
+				m_tagName=ReadUtil.readInt(m_stream);
+				/*?*/ReadUtil.readInt(m_stream);
+				/*?*/ReadUtil.readInt(m_stream);
 				break;
 			}
 			case XmlPullParser.END_DOCUMENT:
 			{
-				/*namespace?*/readInt();
-				/*name?*/readInt();
+				/*namespace?*/ReadUtil.readInt(m_stream);
+				/*name?*/ReadUtil.readInt(m_stream);
 				break;
 			}
 			default:
@@ -191,56 +187,19 @@ public class AXMLParser {
 		}
 		m_started=true;
 		
-		int signature=readInt();
-		if (signature!=0x80003) {
-			throw new IOException("Invalid signature ("+signature+").");
+		ReadUtil.readCheckType(m_stream,AXML_CHUNK_TYPE);
+		/*chunk size*/ReadUtil.readInt(m_stream);
+		
+		ReadUtil.readCheckType(m_stream,StringBlock.CHUNK_TYPE);
+		m_strings=new StringBlock();
+		m_strings.read(m_stream);
+		
+		ReadUtil.readCheckType(m_stream,RESOURCEIDS_CHUNK_TYPE);
+		int chunkSize=ReadUtil.readInt(m_stream);
+		if (chunkSize<8 || (chunkSize%4)!=0) {
+			throw new IOException("Invalid resource ids size ("+chunkSize+").");
 		}
-		/*chunk size*/readInt();
-		
-		/*chunk signature*/readInt();
-		/*chunk size*/readInt();
-		int stringCount=readInt();
-		/*?*/readInt();
-		/*?*/readInt();
-		/*?*/readInt();
-		/*?*/readInt();
-		
-		m_strings=new String[stringCount];
-		{
-			int offsets[]=new int[stringCount];
-			for (int i=0;i!=stringCount;++i) {
-				offsets[i]=readInt();
-			}
-			
-			int baseOffset=m_offset;
-			for (int c=0;c!=stringCount;++c) {
-				long offset=m_offset-baseOffset;
-				int index=0;
-				for (;index!=stringCount;++index) {
-					if (offsets[index]==offset) {
-						break;
-					}
-				}
-				if (index==stringCount) {
-					throw new IOException("Invalid string offset ("+offset+").");
-				}
-				m_strings[index]=readString();
-			}
-		}
-		
-		// Align to 4byte boundary
-		readInt(m_offset%4);
-		
-		/*chunk signature*/readInt();
-		int resourceIDLength=readInt()-8;
-		
-		if (resourceIDLength<0) {
-			throw new IOException("Invalid resource id length ("+resourceIDLength+").");
-		}
-		m_resourceIDs=new int[resourceIDLength/4];
-		for (int i=0;i!=m_resourceIDs.length;++i) {
-			m_resourceIDs[i]=readInt();
-		}
+		m_resourceIDs=ReadUtil.readIntArray(m_stream,chunkSize/4-2);
 	}
 
 	private TagAttribute getAttribute(int index) {
@@ -257,55 +216,23 @@ public class AXMLParser {
 		if (index==-1) {
 			return "";
 		}
-		if (index>=0 && index<m_strings.length) {
-			return m_strings[index];
-		} else {
-			throw new IndexOutOfBoundsException("Invalid string index ("+index+").");
-		}
-	}
-	
-	private final int readInt() throws IOException {
-		return readInt(4);
-	}
-	
-	private final int readShort() throws IOException {
-		return readInt(2);
-	}
-	
-	private final String readString() throws IOException {
-		int length=readShort();
-		StringBuilder builder=new StringBuilder(length);
-		for (int i=0;i!=length;++i) {
-			builder.append((char)readShort());
-		}
-		readShort();
-		return builder.toString();
-	}
-	
-	private final int readInt(int length) throws IOException {
-		int result=0;
-		for (int i=0;i!=length;++i) {
-			int b=m_stream.read();
-			if (b==-1) {
-				throw new EOFException();
-			}
-			m_offset+=1;
-			result|=(b<<(i*8));
-		}
-		return result;		
+		return m_strings.getRaw(index);
 	}
 	
 	/////////////////////////////////// data
 		
 	private InputStream m_stream;
-	private int m_offset;
 	
 	private boolean m_started;
-	private String[] m_strings;
+	private StringBlock m_strings;
 	private int[] m_resourceIDs;
 	
 	private int m_tagType;
 	private int m_tagSourceLine;
 	private int m_tagName;
 	private TagAttribute[] m_tagAttributes;
+	
+	private static final int 
+		AXML_CHUNK_TYPE			=0x00080003,
+		RESOURCEIDS_CHUNK_TYPE	=0x00080180;
 }

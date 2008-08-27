@@ -26,6 +26,7 @@ import java.io.InputStream;
  * TODO:
  * - implement get()
  * - store all as one int[] chunk?
+ * - hide constructor and return object from read()?
  *
  */
 public class StringBlock {
@@ -33,7 +34,7 @@ public class StringBlock {
 	/**
 	 * Type of string block chunk.
 	 */
-	public static final int TYPE=0x001C0001;
+	public static final int CHUNK_TYPE=0x001C0001;
 	
 	/**
 	 * Reads string block from stream.
@@ -41,16 +42,12 @@ public class StringBlock {
 	 * In case of exception object retains previous state. 
 	 */
 	public void read(InputStream stream) throws IOException {
-		int size=ReadUtil.readInt(stream);
+		int chunkSize=ReadUtil.readInt(stream);
 		int stringCount=ReadUtil.readInt(stream);
 		int styleOffsetCount=ReadUtil.readInt(stream);
-		int always0=ReadUtil.readInt(stream);
+		/*?*/ReadUtil.readInt(stream);
 		int stringsOffset=ReadUtil.readInt(stream);
 		int stylesOffset=ReadUtil.readInt(stream);
-		
-		if (always0!=0) {
-			throw new IOException("StringBlock: unknown value is not 0 ("+always0+").");
-		}
 		
 		int[] stringOffsets=null;
 		int[] strings=null;
@@ -62,17 +59,18 @@ public class StringBlock {
 			styleOffsets=ReadUtil.readIntArray(stream,styleOffsetCount);
 		}
 		{
-			int endOffset=(stylesOffset==0)?size:stylesOffset;
-			if ((endOffset-stringsOffset)%4!=0) {
-				throw new IOException("StringBlock: string data not aligned.");
+			int size=((stylesOffset==0)?chunkSize:stylesOffset)-stringsOffset;
+			if ((size%4)!=0) {
+				throw new IOException("StringBlock: string data size is not multiple of 4 ("+size+").");
 			}
-			strings=ReadUtil.readIntArray(stream,(endOffset-stringsOffset)/4);
+			strings=ReadUtil.readIntArray(stream,size/4);
 		}
 		if (stylesOffset!=0) {
-			if ((size-stringsOffset)%4!=0) {
-				throw new IOException("StringBlock: style data not aligned.");
+			int size=(chunkSize-stylesOffset);
+			if ((size%4)!=0) {
+				throw new IOException("StringBlock: style data size is not multiple of 4 ("+size+").");
 			}
-			styles=ReadUtil.readIntArray(stream,(size-stylesOffset)/4);
+			styles=ReadUtil.readIntArray(stream,size/4);
 		}
 		
 		m_stringOffsets=stringOffsets;
@@ -120,6 +118,61 @@ public class StringBlock {
 		return getRaw(index);
 	}
 	
+	/**
+	 * Returns string with style tags (html-like). 
+	 */
+	public String getHTML(int index) {
+		String raw=getRaw(index);
+		if (raw==null) {
+			return raw;
+		}
+		int[] style=getStyle(index);
+		if (style==null) {
+			return raw;
+		}
+		StringBuilder html=new StringBuilder(raw.length()+32);
+		int offset=0;
+		while (true) {
+			int i=-1;
+			for (int j=0;j!=style.length;j+=3) {
+				if (style[j+1]==-1) {
+					continue;
+				}
+				if (i==-1 || style[i+1]>style[j+1]) {
+					i=j;
+				}
+			}
+			int start=((i!=-1)?style[i+1]:raw.length());
+			for (int j=0;j!=style.length;j+=3) {
+				int end=style[j+2];
+				if (end==-1 || end>=start) {
+					continue;
+				}
+				if (offset<=end) {
+					html.append(raw,offset,end+1);
+					offset=end+1;
+				}
+				style[j+2]=-1;
+				html.append('<');
+				html.append('/');
+				html.append(getRaw(style[j]));
+				html.append('>');
+			}
+			if (offset<start) {
+				html.append(raw,offset,start);
+				offset=start;
+			}
+			if (i==-1) {
+				break;
+			}
+			html.append('<');
+			html.append(getRaw(style[i]));
+			html.append('>');
+			style[i+1]=-1;
+		}
+		return html.toString();
+	}
+	
 	///////////////////////////////////////////// implementation
 
 	/**
@@ -145,7 +198,7 @@ public class StringBlock {
 				}
 				count+=1;
 			}
-			if ((count%3)!=0) {
+			if (count==0 || (count%3)!=0) {
 				return null;
 			}
 			style=new int[count];
