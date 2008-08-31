@@ -35,22 +35,20 @@ import java.util.ArrayList;
 public class ARSCFile {
 	
 	/**
-	 * 'id'-1 gives folder name index.
-	 * 'flags' values meaning is unknown.
-	 * 'flags.length' is total resource count in folder.
-	 * 'flags' value of -1 means resource is not available 
-	 * 		in current configuration.
+	 * 'id'-1 gives asset name index.
+	 * 'flags' values are essentially changingConfiguration values.
+	 * 'flags.length' is total resource count in asset.
 	 */
-	public static class Folder {
+	public static class Asset {
 		public int id;
-		public int[] flags; // changingConfigurations
+		public int[] flags;
 		public Content[] contents;
 	}
 	
 	/**
 	 */
 	public static class Content {
-		public int folderID;
+		public int assetID;
 		public Configuration configuration;
 		public int[] offsets;
 		public int[] data;
@@ -74,20 +72,20 @@ public class ARSCFile {
 	
 	/////////////////////////////////// data
 	
+	public int packageID;
 	public String packageName;
 	public StringBlock stringValues;
 	public StringBlock stringIDs;
-	public StringBlock folderNames;
-	public Folder[] folders;
+	public StringBlock assetNames;
+	public Asset[] assets;
 	
 	/////////////////////////////////// creator
 	
-	@SuppressWarnings("unchecked")
 	public static ARSCFile read(InputStream stream) throws IOException {
 		ARSCFile arsc=new ARSCFile();
 		ReadUtil.readCheckType(stream,ARSC_CHUNK_TYPE);
 		/*size*/ReadUtil.readInt(stream);
-		/*?*/ReadUtil.readInt(stream);
+		/*package count?*/ReadUtil.readInt(stream);
 		
 		ReadUtil.readCheckType(stream,StringBlock.CHUNK_TYPE);
 		arsc.stringValues=new StringBlock();
@@ -95,7 +93,7 @@ public class ARSCFile {
 		
 		ReadUtil.readCheckType(stream,PACKAGE_CHUNK_TYPE);
 		/*size*/ReadUtil.readInt(stream);
-		/*some offset?*/ReadUtil.readInt(stream);
+		arsc.packageID=ReadUtil.readInt(stream);
 		{
 			final int nameLength=128;
 			StringBuilder name=new StringBuilder(16);
@@ -114,55 +112,55 @@ public class ARSCFile {
 		}
 		
 		/*signature?*/ReadUtil.readInt(stream);
-		/*folderNameCount*/ReadUtil.readInt(stream);
+		/*assetNameCount*/ReadUtil.readInt(stream);
 		/*stringIDOffset*/ReadUtil.readInt(stream);
 		/*stringIDCount*/ReadUtil.readInt(stream);
 		
 		ReadUtil.readCheckType(stream,StringBlock.CHUNK_TYPE);
-		arsc.folderNames=new StringBlock();
-		arsc.folderNames.read(stream);
+		arsc.assetNames=new StringBlock();
+		arsc.assetNames.read(stream);
 		
 		ReadUtil.readCheckType(stream,StringBlock.CHUNK_TYPE);
 		arsc.stringIDs=new StringBlock();
 		arsc.stringIDs.read(stream);
 		
-		ArrayList folders=new ArrayList();
+		ArrayList assets=new ArrayList();
 		ArrayList contents=new ArrayList();
 		while (stream.available()!=0) {
 			int chunkType=ReadUtil.readInt(stream);
 			int chunkSize=ReadUtil.readInt(stream);
-			if (chunkType==FOLDER_CHUNK_TYPE) {
-				folders.add(readFolder(stream));
+			if (chunkType==ASSET_CHUNK_TYPE) {
+				assets.add(readasset(stream));
 			} else if (chunkType==CONTENT_CHUNK_TYPE) {
 				contents.add(readContent(stream,chunkSize));
 			} else {
-				throw new IOException("ARSCFile: unexpected chunk type ("+chunkType+").");
+				throw new IOException("Unexpected chunk type ("+chunkType+").");
 			}
 		}
 		
-		arsc.folders=new Folder[folders.size()];
+		arsc.assets=new Asset[assets.size()];
 		int contentLeft=contents.size();
-		for (int i=0;i!=folders.size();++i) {
-			Folder folder=(Folder)folders.get(i);
+		for (int i=0;i!=assets.size();++i) {
+			Asset asset=(Asset)assets.get(i);
 			int contentCount=0;
 			for (int j=0;j!=contents.size();++j) {
 				Content content=(Content)contents.get(j);
-				if (content.folderID==folder.id) {
+				if (content.assetID==asset.id) {
 					contentCount+=1;
 				}
 			}
-			folder.contents=new Content[contentCount];
+			asset.contents=new Content[contentCount];
 			for (int j=0,k=0;j!=contents.size();++j) {
 				Content content=(Content)contents.get(j);
-				if (content.folderID==folder.id) {
-					folder.contents[k++]=content;
+				if (content.assetID==asset.id) {
+					asset.contents[k++]=content;
 					contentLeft-=1;
 				}
 			}
-			arsc.folders[i]=folder;
+			arsc.assets[i]=asset;
 		}
 		if (contentLeft!=0) {
-			throw new IOException("ARSCFile: problem in mapping contents to folders ("+contentLeft+" left).");
+			throw new IOException("Problem in mapping contents to assets ("+contentLeft+" left).");
 		}
 		
 		return arsc;
@@ -173,24 +171,24 @@ public class ARSCFile {
 	private ARSCFile() {
 	}
 	
-	private static Folder readFolder(InputStream stream) throws IOException {
-		Folder folder=new Folder();
-		folder.id=ReadUtil.readInt(stream);
-		int flagCount=ReadUtil.readInt(stream);
-		folder.flags=ReadUtil.readIntArray(stream,flagCount);
-		return folder;		
+	private static Asset readasset(InputStream stream) throws IOException {
+		Asset asset=new Asset();
+		asset.id=ReadUtil.readInt(stream);
+		int count=ReadUtil.readInt(stream);
+		asset.flags=ReadUtil.readIntArray(stream,count);
+		return asset;		
 	}
 	
 	private static Content readContent(InputStream stream,int chunkSize) throws IOException {
 		Content content=new Content();
-		content.folderID=ReadUtil.readInt(stream);
+		content.assetID=ReadUtil.readInt(stream);
 		int offsetCount=ReadUtil.readInt(stream);
 		int dataOffset=ReadUtil.readInt(stream);
 		content.configuration=readConfiguration(stream);
 		content.offsets=ReadUtil.readIntArray(stream,offsetCount);
 		int dataSize=(chunkSize-dataOffset);
 		if ((dataSize%4)!=0) {
-			throw new IOException("ARSCFile: content data size ("+dataSize+") is not multiple of 4.");
+			throw new IOException("Content data size ("+dataSize+") is not multiple of 4.");
 		}
 		content.data=ReadUtil.readIntArray(stream,dataSize/4);
 		return content;
@@ -199,7 +197,7 @@ public class ARSCFile {
 	private static Configuration readConfiguration(InputStream stream) throws IOException {
 		int size=ReadUtil.readInt(stream);
 		if (size!=0x1C) {
-			throw new IOException("ARSCFile: bad content configuration size ("+size+").");
+			throw new IOException("Bad content configuration size ("+size+").");
 		}
 		int[] elements=ReadUtil.readIntArray(stream,size/4-1);
 		Configuration configuration=new Configuration();
@@ -252,7 +250,7 @@ public class ARSCFile {
 	private static final int 
 		ARSC_CHUNK_TYPE		=0x000C0002,
 		PACKAGE_CHUNK_TYPE	=0x011C0200,
-		FOLDER_CHUNK_TYPE	=0x00100202,
+		ASSET_CHUNK_TYPE	=0x00100202,
 		CONTENT_CHUNK_TYPE	=0x00300201;
 	
 }

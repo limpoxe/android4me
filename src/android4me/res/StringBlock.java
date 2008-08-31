@@ -114,10 +114,10 @@ public class StringBlock {
 	 * Returns string with style information (if any).
 	 * Returns null if index is invalid or object was not initialized.
 	 */
-	public CharSequence get(int index) {
+	public String get(int index) {
 		return getRaw(index);
 	}
-	
+
 	/**
 	 * Returns string with style tags (html-like). 
 	 */

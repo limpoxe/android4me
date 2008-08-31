@@ -13,7 +13,7 @@ public interface CharSequence {
 
     char charAt(int index);
 
-    CharSequence subSequence(int start, int end);
+    //CharSequence subSequence(int start, int end);
 
     public String toString();
 }

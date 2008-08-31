@@ -30,22 +30,26 @@ public interface Appendable {
      */
     Appendable append(char c) throws IOException;
 
-    /**
-     * Appends the specified character sequence. 
-     *
-     * @param  csq the character sequence to append.
-     * @return <code>this</code>
-     */
-    Appendable append(CharSequence csq) throws IOException;
-
-    /**
-     * Appends a subsequence of the specified character sequence. 
-     *
-     * @param  csq the character sequence to append.
-     * @param  start the index of the first character to append.
-     * @param  end the index after the last character to append.
-     * @return <code>this</code>
-     */
-    Appendable append(CharSequence csq, int start, int end) throws IOException;
+    Appendable append(String string) throws IOException;
+    Appendable append(String string, int start, int end) throws IOException;
+    
+    
+//    /**
+//     * Appends the specified character sequence. 
+//     *
+//     * @param  csq the character sequence to append.
+//     * @return <code>this</code>
+//     */
+//    Appendable append(CharSequence csq) throws IOException;
+//
+//    /**
+//     * Appends a subsequence of the specified character sequence. 
+//     *
+//     * @param  csq the character sequence to append.
+//     * @param  start the index of the first character to append.
+//     * @param  end the index after the last character to append.
+//     * @return <code>this</code>
+//     */
+//    Appendable append(CharSequence csq, int start, int end) throws IOException;
 
 }
