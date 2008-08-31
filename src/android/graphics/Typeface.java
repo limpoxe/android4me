@@ -41,10 +41,6 @@ public class Typeface {
 		return null;
 	}
 
-//	public static Typeface createFromAsset(AssetManager mgr, String path) {
-//		return null;
-//	}
-
 	public static final Typeface 
 		DEFAULT				=new Typeface(),
 		DEFAULT_BOLD		=new Typeface(),

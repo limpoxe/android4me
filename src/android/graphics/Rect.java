@@ -18,60 +18,128 @@ package android.graphics;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+/**
+ * @author Dmitry Skiba
+ */
 public final class Rect implements Parcelable {
-	public Rect() {}
 
-	public Rect(int left, int top, int right, int bottom) {}
+	public Rect(int left, int top, int right, int bottom) {
+		this.left=left; this.top=top;
+		this.right=right; this.bottom=bottom;
+	}
 
-	public Rect(Rect r) {}
+	public Rect(Rect r) {
+		this.left=r.left; this.top=r.top;
+		this.right=r.right; this.bottom=r.bottom;
+	}
 
-	public boolean equals(Object obj) { return false; }
+	public final boolean equals(Object object) {
+		if (object==null) {
+			return false;
+		}
+		Rect r=(Rect)object;
+		return 	this.left==r.left && this.top==r.top &&
+				this.right==r.right && this.bottom==r.bottom;
+	}
 
-	public String toString() { return null; }
+	public final String toString() {
+		return null;
+	}
 
-	public final boolean isEmpty() { return false; }
+	public final boolean isEmpty() { 
+		return left>=right || top>=bottom;
+	}
 
-	public final int width() { return 0; }
+	public final int width() {
+		return right-left;
+	}
 
-	public int height() { return 0; }
+	public final int height() {
+		return bottom-top;
+	}
 
-	public void setEmpty() {}
+	public final void setEmpty() {
+		left=0; right=0;
+		right=0; bottom=0;
+	}
 
-	public void set(int left, int top, int right, int bottom) {}
+	public final void set(int left, int top, int right, int bottom) {
+		this.left=left; this.top=top;
+		this.right=right; this.bottom=bottom;
+	}
 
-	public void set(Rect src) {}
+	public final void set(Rect r) {
+		this.left=r.left; this.top=r.top;
+		this.right=r.right; this.bottom=r.bottom;
+	}
 
-	public void offset(int dx, int dy) {}
+	public final void offset(int dx, int dy) {
+		left+=dx; top+=dy;
+		right+=dx; bottom+=dy;
+	}
 
-	public void offsetTo(int newLeft, int newTop) {}
+	public final void offsetTo(int newLeft, int newTop) {
+		right=newLeft+width();
+		bottom=newTop+height();
+	}
 
-	public void inset(int dx, int dy) {}
+	public final void inset(int dx, int dy) {
+		left+=dx; top+=dy;
+		right-=dx; bottom-=dy;
+	}
 
-	public boolean contains(int x, int y) { return false; }
+	public final boolean contains(int x, int y) { 
+		return 	(left>=right || top>=bottom) &&
+				left>=x && x<right &&
+				top>=y && y<bottom;
+	}
 
-	public boolean contains(int left, int top, int right, int bottom) { return false; }
+	public final boolean contains(int left, int top, int right, int bottom) {
+		return 	(this.left>=this.right || this.top>=this.bottom) &&
+				left>=this.left && left<this.right && 
+				right>=this.left && right<this.right &&
+				top>=this.top && top<this.bottom && 
+				bottom>=this.top && bottom<this.bottom;
+	}
 
-	public boolean contains(Rect r) { return false; }
+	public final boolean contains(Rect r) {
+		return 	(this.left>=this.right || this.top>=this.bottom) &&
+				r.left>=this.left && r.left<this.right && 
+				r.right>=this.left && r.right<this.right &&
+				r.top>=this.top && r.top<this.bottom && 
+				r.bottom>=this.top && r.bottom<this.bottom;
+	}
 
-	public boolean intersect(int left, int top, int right, int bottom) { return false; }
+	public final boolean intersect(int left, int top, int right, int bottom) { return false; }
 
-	public boolean intersect(Rect r) { return false; }
+	public final boolean intersect(Rect r) { return false; }
 
-	public boolean setIntersect(Rect a, Rect b) { return false; }
+	public final boolean setIntersect(Rect a, Rect b) { return false; }
 
-	public boolean intersects(int left, int top, int right, int bottom) { return false; }
+	public final boolean intersects(int left, int top, int right, int bottom) { 
+		return 	this.left<right && left<this.right &&
+				this.top<bottom && top<this.bottom;
+	}
 
-	public static boolean intersects(Rect a, Rect b) { return false; }
+	public final static boolean intersects(Rect x, Rect y) {
+		return 	x.left<y.right && y.left<x.right &&
+				x.top<y.bottom && y.top<x.bottom;
+	}
 
-	public void union(int left, int top, int right, int bottom) {}
+	public final void union(int left, int top, int right, int bottom) {}
 
-	public void union(Rect r) {}
+	public final void union(Rect r) {}
 
-	public void sort() {}
+	public final void sort() {}
 
-	public void writeToParcel(Parcel out) {}
-
-	public void readFromParcel(Parcel in) {}
+	public final void writeToParcel(Parcel out) {
+		out.writeInt(left); out.writeInt(top);
+		out.writeInt(right); out.writeInt(bottom);
+	}
+	public final void readFromParcel(Parcel in) {
+		left=in.readInt(); top=in.readInt();
+		right=in.readInt(); bottom=in.readInt();
+	}
 
 	public int left;
 	public int top;

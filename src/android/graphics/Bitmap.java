@@ -21,33 +21,10 @@ import java.io.OutputStream;
 
 import javolution.lang.Enum;
 
-public final class Bitmap implements Parcelable {
-	
-	public static final class CompressFormat extends Enum {
-		public static final CompressFormat 
-			JPEG	=new CompressFormat("JPEG",0),
-			PNG		=new CompressFormat("PNG",1),
-			ZLIB	=new CompressFormat("ZLIB",2);
-		
-		public static final CompressFormat[] values() {
-			return VALUES;
-		}
-		public static CompressFormat valueOf(String name) {
-			return (CompressFormat)findValue(VALUES,name);
-		}
-
-		private CompressFormat(String name,int ordinal) {
-			super(name,ordinal);
-		}
-		private static final CompressFormat VALUES[]={
-			JPEG,PNG,ZLIB
-		};
-	}
+public final class Bitmap {
 
 	public static final class Config extends Enum {
 		public static final Config 
-			RGB_565		=new Config("RGB_565",0),
-			ARGB_4444	=new Config("ARGB_4444",1),
 			ARGB_8888	=new Config("ARGB_8888",2);
 		
 		public static final Config[] values() {
@@ -61,27 +38,11 @@ public final class Bitmap implements Parcelable {
 			super(name,ordinal);
 		}
 		private static final Config VALUES[]={
-			RGB_565,ARGB_4444,ARGB_8888
+			ARGB_8888
 		};
 	}
 
 	public static Bitmap createBitmap(int width, int height, boolean hasAlpha) {
-		return null;
-	}
-
-	public int width() {
-		return 0;
-	}
-
-	public int height() {
-		return 0;
-	}
-
-	private static void checkXYSign(int x, int y) {}
-
-	private static void checkWidthHeight(int width, int height) {}
-
-	public Bitmap copy(Config config, boolean isMutable) {
 		return null;
 	}
 
@@ -93,10 +54,6 @@ public final class Bitmap implements Parcelable {
 		return null;
 	}
 
-	public static Bitmap createBitmap(Bitmap source, int x, int y, int width, int height, Matrix m, boolean filter) {
-		return null;
-	}
-
 	public static Bitmap createBitmap(int width, int height, Config config) {
 		return null;
 	}
@@ -105,24 +62,24 @@ public final class Bitmap implements Parcelable {
 		return null;
 	}
 
+	public Bitmap copy(Config config, boolean isMutable) {
+		return null;
+	}
+	
+	public int getWidth() {
+		return 0;
+	}
+
+	public int getHeight() {
+		return 0;
+	}
+
 	public byte[] getNinePatchChunk() {
 		return null;
 	}
 
-	public boolean compress(CompressFormat format, int quality, OutputStream stream) {
-		return false;
-	}
-
 	public final boolean isMutable() {
 		return false;
-	}
-
-	public final int getWidth() {
-		return 0;
-	}
-
-	public final int getHeight() {
-		return 0;
 	}
 
 	public final boolean hasAlpha() {
@@ -147,25 +104,5 @@ public final class Bitmap implements Parcelable {
 
 	public void setPixels(int pixels[], int offset, int stride, int x, int y, int width, int height) {
 		
-	}
-
-	public boolean hasMipMap() {
-		return false;
-	}
-
-	public void buildMipMap(boolean flag) {
-	}
-
-	public void removeMipMap() {
-	}
-
-	public void writeToParcel(Parcel p) {}
-
-	public Bitmap extractAlpha() {
-		return null;
-	}
-
-	public Bitmap extractAlpha(Paint paint, int offsetXY[]) {
-		return null;
 	}
 }
