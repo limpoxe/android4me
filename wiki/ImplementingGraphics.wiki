@@ -1,4 +1,5 @@
 #summary Ways to implement android.graphics package.
+#labels Deprecated
 
 = Details =
 
