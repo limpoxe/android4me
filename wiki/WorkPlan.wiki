@@ -1,4 +1,5 @@
 #summary Work plan for near future
+#labels Deprecated
 
 = Overall goals =
 
