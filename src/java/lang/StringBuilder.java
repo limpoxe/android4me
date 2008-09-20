@@ -45,7 +45,7 @@ import java.io.Serializable;
  * @since 1.5
  */
 public final class StringBuilder extends AbstractStringBuilder implements
-        /*Appendable, */CharSequence, Serializable {
+        Appendable, CharSequence, Serializable {
 
     private static final long serialVersionUID = 4383685877147921099L;
 
@@ -135,7 +135,7 @@ public final class StringBuilder extends AbstractStringBuilder implements
      * 
      * @see String#valueOf(char)
      */
-    public StringBuilder append(char c) {
+    public Appendable append(char c) {
         append0(c);
         return this;
     }
@@ -238,29 +238,29 @@ public final class StringBuilder extends AbstractStringBuilder implements
      * @param str The String to append to this object.
      * @return A reference to this object.
      */
-    public StringBuilder append(String str) {
+    public Appendable append(String str) {
         append0(str);
         return this;
     }
 
-    /**
-     * <p>
-     * Appends the contents of the StringBuffer. If the StringBuffer passed is
-     * <code>null</code>, then the StringBuffer <code>"null"</code> is
-     * appended.
-     * </p>
-     * 
-     * @param sb The StringBuffer to append to this object.
-     * @return A reference to this object.
-     */
-    public StringBuilder append(StringBuffer sb) {
-        if (sb == null) {
-            appendNull();
-        } else {
-            append0(sb.getValue(), 0, sb.length());
-        }
-        return this;
-    }
+//    /**
+//     * <p>
+//     * Appends the contents of the StringBuffer. If the StringBuffer passed is
+//     * <code>null</code>, then the StringBuffer <code>"null"</code> is
+//     * appended.
+//     * </p>
+//     * 
+//     * @param sb The StringBuffer to append to this object.
+//     * @return A reference to this object.
+//     */
+//    public StringBuilder append(StringBuffer sb) {
+//        if (sb == null) {
+//            appendNull();
+//        } else {
+//            append0(sb.getValue(), 0, sb.length());
+//        }
+//        return this;
+//    }
 
     /**
      * <p>
@@ -302,44 +302,44 @@ public final class StringBuilder extends AbstractStringBuilder implements
     }
 
 
-//    /**
-//     * <p>
-//     * Appends the String representation of the <code>CharSequence</code>
-//     * value passed. If the <code>CharSequence</code> is <code>null</code>,
-//     * then the String <code>"null"</code> is appended.
-//     * </p>
-//     * 
-//     * @param csq The <code>CharSequence</code> value to append to this
-//     *        object.
-//     * @return A reference to this object.
-//     */
-//    public StringBuilder append(CharSequence csq) {
-//        if (csq == null) {
-//            appendNull();
-//        } else {
-//            append0(csq.toString());
-//        }
-//        return this;
-//    }    
+    /**
+     * <p>
+     * Appends the String representation of the <code>CharSequence</code>
+     * value passed. If the <code>CharSequence</code> is <code>null</code>,
+     * then the String <code>"null"</code> is appended.
+     * </p>
+     * 
+     * @param csq The <code>CharSequence</code> value to append to this
+     *        object.
+     * @return A reference to this object.
+     */
+    public Appendable append(CharSequence csq) {
+        if (csq == null) {
+            appendNull();
+        } else {
+            append0(csq.toString());
+        }
+        return this;
+    }    
     
-//    /**
-//     * <p>
-//     * Appends the String representation of the subsequence of the
-//     * <code>CharSequence</code> value passed. If the
-//     * <code>CharSequence</code> is <code>null</code>, then the String
-//     * <code>"null"</code> is used to extract the subsequence from.
-//     * </p>
-//     * 
-//     * @param csq The <code>CharSequence</code> value to append to this
-//     *        object.
-//     * @param start The beginning index of the subsequence.
-//     * @param end The ending index of the subsequence.
-//     * @return A reference to this object.
-//     */
-//    public StringBuilder append(CharSequence csq, int start, int end) {
-//        append0(csq, start, end);
-//        return this;
-//    }
+    /**
+     * <p>
+     * Appends the String representation of the subsequence of the
+     * <code>CharSequence</code> value passed. If the
+     * <code>CharSequence</code> is <code>null</code>, then the String
+     * <code>"null"</code> is used to extract the subsequence from.
+     * </p>
+     * 
+     * @param csq The <code>CharSequence</code> value to append to this
+     *        object.
+     * @param start The beginning index of the subsequence.
+     * @param end The ending index of the subsequence.
+     * @return A reference to this object.
+     */
+    public Appendable append(CharSequence csq, int start, int end) {
+        append0(csq, start, end);
+        return this;
+    }
 
     /**
      * <p>
@@ -355,7 +355,7 @@ public final class StringBuilder extends AbstractStringBuilder implements
      * @param end The ending index of the subsequence.
      * @return A reference to this object.
      */
-    public StringBuilder append(String string, int start, int end) {
+    public Appendable append(String string, int start, int end) {
         append0(string, start, end);
         return this;
     }
@@ -657,34 +657,34 @@ public final class StringBuilder extends AbstractStringBuilder implements
         return this;
     }
 
-//    /**
-//     * <p>
-//     * Inserts the String representation of the subsequence of the
-//     * <code>CharSequence</code> value passed into this object at the
-//     * <code>offset</code> passed. The <code>CharSequence</code> value is
-//     * converted to a String as defined by
-//     * {@link CharSequence#subSequence(int, int)}. If the
-//     * <code>CharSequence</code> is <code>null</code>, then the String
-//     * <code>"null"</code> is used to determine the subsequence.
-//     * </p>
-//     * 
-//     * @param offset The index of this object to insert the value.
-//     * @param s The <code>CharSequence</code> value to insert into this
-//     *        object.
-//     * @param start The start of the subsequence of the <code>s</code>
-//     *        parameter.
-//     * @param end The end of the subsequence of the <code>s</code> parameter.
-//     * @return A reference to this object.
-//     * 
-//     * @throws IndexOutOfBoundsException if <code>offset</code> is negative or
-//     *         greater than the current {@link #length()}.
-//     * 
-//     * @see CharSequence#subSequence(int, int)
-//     */
-//    public StringBuilder insert(int offset, CharSequence s, int start, int end) {
-//        insert0(offset, s, start, end);
-//        return this;
-//    }
+    /**
+     * <p>
+     * Inserts the String representation of the subsequence of the
+     * <code>CharSequence</code> value passed into this object at the
+     * <code>offset</code> passed. The <code>CharSequence</code> value is
+     * converted to a String as defined by
+     * {@link CharSequence#subSequence(int, int)}. If the
+     * <code>CharSequence</code> is <code>null</code>, then the String
+     * <code>"null"</code> is used to determine the subsequence.
+     * </p>
+     * 
+     * @param offset The index of this object to insert the value.
+     * @param s The <code>CharSequence</code> value to insert into this
+     *        object.
+     * @param start The start of the subsequence of the <code>s</code>
+     *        parameter.
+     * @param end The end of the subsequence of the <code>s</code> parameter.
+     * @return A reference to this object.
+     * 
+     * @throws IndexOutOfBoundsException if <code>offset</code> is negative or
+     *         greater than the current {@link #length()}.
+     * 
+     * @see CharSequence#subSequence(int, int)
+     */
+    public StringBuilder insert(int offset, CharSequence s, int start, int end) {
+        insert0(offset, s, start, end);
+        return this;
+    }
 
     /**
      * <p>

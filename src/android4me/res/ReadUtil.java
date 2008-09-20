@@ -23,12 +23,23 @@ import java.io.InputStream;
  * @author Dmitry Skiba
  * 
  * Various read helpers.
+ * 
+ * TODO: remove? (as we have IntReader now)
  *
  */
 public class ReadUtil {
 
 	public static final void readCheckType(InputStream stream,int expectedType) throws IOException {
 		int type=readInt(stream);
+		if (type!=expectedType) {
+			throw new IOException(
+				"Expected chunk of type 0x"+Integer.toHexString(expectedType)+
+				", read 0x"+Integer.toHexString(type)+".");
+		}
+	}
+
+	public static final void readCheckType(IntReader reader,int expectedType) throws IOException {
+		int type=reader.readInt();
 		if (type!=expectedType) {
 			throw new IOException(
 				"Expected chunk of type 0x"+Integer.toHexString(expectedType)+

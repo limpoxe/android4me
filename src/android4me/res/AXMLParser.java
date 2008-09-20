@@ -18,32 +18,201 @@ package android4me.res;
 import java.io.IOException;
 import java.io.InputStream;
 
-import org.xmlpull.v1.XmlPullParser;
-
 /**
  * @author Dmitry Skiba
  * 
  * Parser for Android's binary xml files (axml).
  * 
- * Parser follows XmlPullParser interface, but does not implement it.
- * You can implement XmlPullParser ontop of this class and contribute
- * it to Android4ME project. See http://code.google.com/p/android4me
- * 
  * TODO: 
- *	* clarify interface methods, 
- *     not all behavior from XmlPullParser is supported
  * 	* understand ? values
  */
-public class AXMLParser {
+public final class AXMLParser {
 	
-	public AXMLParser(InputStream stream) {
+	/**
+	 * Types of returned tags.
+	 * Values are compatible to those in XmlPullParser.
+	 */
+	public static final int 
+		START_DOCUMENT 		=0,
+		END_DOCUMENT		=1,
+		START_TAG			=2,
+		END_TAG				=3,
+		TEXT				=4;
+	
+	/**
+	 * Creates object and reads file info.
+	 * Call next() to read first tag.
+	 */
+	public AXMLParser(InputStream stream) throws IOException {
 		m_stream=stream;
-		m_started=false;
+		doStart();
 	}
 	
-	// See next() in XmlPullParser.
-	public int next() throws IOException {
-		start();
+	/**
+	 * Closes parser:
+	 * 	* closes (and nulls) underlying stream
+	 * 	* nulls dynamic data
+	 * 	* moves object to 'closed' state, where methods
+	 * 	  return invalid values and next() throws IOException.
+	 */
+	public final void close() {
+		if (m_stream==null) {
+			return;
+		}
+		try {
+			m_stream.close();
+		}
+		catch (IOException e) {
+		}
+		if (m_nextException==null) {			
+			m_nextException=new IOException("Closed.");
+		}
+		m_stream=null;
+		resetState();
+	}
+	
+	/**
+	 * Advances to the next tag.
+	 * Once method returns END_DOCUMENT, it always returns END_DOCUMENT.
+	 * Once method throws an exception, it always throws the same exception.
+	 * 
+	 */
+	public final int next() throws IOException {
+		if (m_nextException!=null) {
+			throw m_nextException;
+		}
+		try {
+			return doNext();
+		}
+		catch (IOException e) {
+			m_nextException=e;
+			resetState();
+			throw e;
+		}
+	}
+	
+	/**
+	 * Returns current tag type.
+	 */
+	public final int getType() {
+		return m_tagType;
+	}
+	
+	/**
+	 * Returns name for the current tag.
+	 */
+	public final String getName() {
+		if (m_tagName==-1) {
+			return null;
+		}
+		return getString(m_tagName);
+	}
+	
+	/**
+	 * Returns line number in the original XML where the current tag was.
+	 */
+	public final int getLineNumber() {
+		return m_tagSourceLine;
+	}
+	
+	/**
+	 * Returns count of attributes for the current tag.
+	 */
+	public final int getAttributeCount() {
+		if (m_tagAttributes==null) {
+			return -1;
+		}
+		return m_tagAttributes.length;
+	}
+	
+	/**
+	 * Returns attribute namespace.
+	 */
+	public final String getAttributeNamespace(int index) {
+		return getString(getAttribute(index).namespace);
+	}
+	
+	/**
+	 * Returns attribute name.
+	 */
+	public final String getAttributeName(int index) {
+		return getString(getAttribute(index).name);
+	}
+
+	/**
+	 * Returns attribute resource ID.
+	 */
+	public final int getAttributeResourceID(int index) {
+		int resourceIndex=getAttribute(index).name;
+		if (m_resourceIDs==null ||
+			resourceIndex<0 || resourceIndex>=m_resourceIDs.length)
+		{
+			return 0;
+		}
+		return m_resourceIDs[resourceIndex];
+	}
+	
+	/**
+	 * Returns type of attribute value.
+	 * See TypedValue.TYPE_ values.
+	 */
+	public final int getAttributeValueType(int index) {
+		return getAttribute(index).valueType;
+	}
+	
+	/**
+	 * For attributes of type TypedValue.TYPE_STRING returns
+	 *  string value. For other types returns empty string.
+	 */
+	public final String getAttributeValueString(int index) {
+		return getString(getAttribute(index).valueString);
+	}
+	
+	/**
+	 * Returns integer attribute value.
+	 * This integer interpreted according to attribute type.
+	 */
+	public final int getAttributeValue(int index) {
+		return getAttribute(index).value;
+	}
+	
+	///////////////////////////////////////////// implementation
+	
+	private static final class TagAttribute {
+		public int namespace;
+		public int name;
+		public int valueString;
+		public int valueType;
+		public int value;
+	}
+	
+	private final void resetState() {
+		m_tagType=-1;
+		m_tagSourceLine=-1;
+		m_tagName=-1;
+		m_tagAttributes=null;
+	}
+	
+	private final void doStart() throws IOException {
+		ReadUtil.readCheckType(m_stream,AXML_CHUNK_TYPE);
+		/*chunk size*/ReadUtil.readInt(m_stream);
+		
+		m_strings=StringBlock.read(new IntReader(m_stream,false));
+		
+		ReadUtil.readCheckType(m_stream,RESOURCEIDS_CHUNK_TYPE);
+		int chunkSize=ReadUtil.readInt(m_stream);
+		if (chunkSize<8 || (chunkSize%4)!=0) {
+			throw new IOException("Invalid resource ids size ("+chunkSize+").");
+		}
+		m_resourceIDs=ReadUtil.readIntArray(m_stream,chunkSize/4-2);
+		
+		resetState();
+	}
+	
+	private final int doNext() throws IOException {
+		if (m_tagType==END_DOCUMENT) {
+			return END_DOCUMENT;
+		}
 		
 		m_tagType=(ReadUtil.readInt(m_stream) & 0xFF);/*other 3 bytes?*/
 		/*some source length*/ReadUtil.readInt(m_stream);
@@ -54,13 +223,13 @@ public class AXMLParser {
 		m_tagAttributes=null;
 
 		switch (m_tagType) {
-			case XmlPullParser.START_DOCUMENT:
+			case START_DOCUMENT:
 			{
 				/*namespace?*/ReadUtil.readInt(m_stream);
 				/*name?*/ReadUtil.readInt(m_stream);
 				break;
 			}
-			case XmlPullParser.START_TAG:
+			case START_TAG:
 			{
 				/*0xFFFFFFFF*/ReadUtil.readInt(m_stream);
 				m_tagName=ReadUtil.readInt(m_stream);
@@ -79,20 +248,20 @@ public class AXMLParser {
 				}
 				break;
 			}
-			case XmlPullParser.END_TAG:
+			case END_TAG:
 			{
 				/*0xFFFFFFFF*/ReadUtil.readInt(m_stream);
 				m_tagName=ReadUtil.readInt(m_stream);
 				break;
 			}
-			case XmlPullParser.TEXT:
+			case TEXT:
 			{
 				m_tagName=ReadUtil.readInt(m_stream);
 				/*?*/ReadUtil.readInt(m_stream);
 				/*?*/ReadUtil.readInt(m_stream);
 				break;
 			}
-			case XmlPullParser.END_DOCUMENT:
+			case END_DOCUMENT:
 			{
 				/*namespace?*/ReadUtil.readInt(m_stream);
 				/*name?*/ReadUtil.readInt(m_stream);
@@ -106,103 +275,7 @@ public class AXMLParser {
 		return m_tagType;
 	}
 	
-	// See getEventType() in XmlPullParser.
-	public int getEventType() {
-		return m_tagType;
-	}
-	
-	// See getName() in XmlPullParser.
-	public String getName() {
-		if (m_tagName==-1) {
-			return null;
-		}
-		return getString(m_tagName);
-	}
-	
-	// See getLineNumber() in XmlPullParser.
-	public int getLineNumber() {
-		return m_tagSourceLine;
-	}
-	
-	// See getAttributeCount() in XmlPullParser.
-	public int getAttributeCount() {
-		if (m_tagAttributes==null) {
-			return -1;
-		}
-		return m_tagAttributes.length;
-	}
-	
-	// See getAttributeNamespace() in XmlPullParser.
-	public String getAttributeNamespace(int index) {
-		return getString(getAttribute(index).namespace);
-	}
-	
-	// See getAttributeName() in XmlPullParser.
-	public String getAttributeName(int index) {
-		return getString(getAttribute(index).name);
-	}
-
-	// Returns resource ID for attribute name.
-	public int getAttributeNameResourceID(int index) {
-		int resourceIndex=getAttribute(index).name;
-		if (m_resourceIDs==null ||
-			resourceIndex<0 || resourceIndex>=m_resourceIDs.length)
-		{
-			return 0;
-		}
-		return m_resourceIDs[resourceIndex];
-	}
-	
-	// See TypedValue.TYPE_ values.
-	public int getAttributeValueType(int index) {
-		return getAttribute(index).valueType;
-	}
-
-	// Returns string value if attribute type is TypedValue.TYPE_STRING,
-	//  or empty string otherwise.
-	public String getAttributeValueString(int index) {
-		return getString(getAttribute(index).valueString);
-	}
-	
-	// Returns integer value for attribute.
-	// Value interpretation is based on type.
-	// For TypedValue.TYPE_STRING meaning is unknown.
-	public int getAttributeValue(int index) {
-		return getAttribute(index).value;
-	}
-	
-	///////////////////////////////////////////// implementation
-	
-	private static final class TagAttribute {
-		public int namespace;
-		public int name;
-		public int valueString;
-		public int valueType;
-		public int value;
-	}
-	
-	private void start() throws IOException {
-		if (m_started) {
-			return;
-		}
-		m_started=true;
-		
-		ReadUtil.readCheckType(m_stream,AXML_CHUNK_TYPE);
-		/*chunk size*/ReadUtil.readInt(m_stream);
-		
-		ReadUtil.readCheckType(m_stream,StringBlock.CHUNK_TYPE);
-		m_strings=new StringBlock();
-		m_strings.read(m_stream);
-		
-		ReadUtil.readCheckType(m_stream,RESOURCEIDS_CHUNK_TYPE);
-		int chunkSize=ReadUtil.readInt(m_stream);
-		if (chunkSize<8 || (chunkSize%4)!=0) {
-			throw new IOException("Invalid resource ids size ("+chunkSize+").");
-		}
-		m_resourceIDs=ReadUtil.readIntArray(m_stream,chunkSize/4-2);
-	}
-
-	private TagAttribute getAttribute(int index) {
+	private final TagAttribute getAttribute(int index) {
 		if (m_tagAttributes==null) {
 			throw new IndexOutOfBoundsException("Attributes are not available.");
 		}
@@ -212,7 +285,7 @@ public class AXMLParser {
 		return m_tagAttributes[index];
 	}
 	
-	private String getString(int index) {
+	private final String getString(int index) {
 		if (index==-1) {
 			return "";
 		}
@@ -223,9 +296,10 @@ public class AXMLParser {
 		
 	private InputStream m_stream;
 	
-	private boolean m_started;
 	private StringBlock m_strings;
 	private int[] m_resourceIDs;
+
+	private IOException m_nextException;
 	
 	private int m_tagType;
 	private int m_tagSourceLine;

@@ -22,5 +22,5 @@ public interface Parcelable {
 		public abstract Object[] newArray(int i);
 	}
 
-	public abstract void writeToParcel(Parcel parcel);
+	public abstract void writeToParcel(Parcel parcel,int flags);
 }

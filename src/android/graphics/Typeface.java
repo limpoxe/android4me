@@ -15,44 +15,74 @@
  */
 package android.graphics;
 
-public class Typeface {
+/**
+ * @author Dmitry Skiba
+ *
+ */
+public final class Typeface {
 
-	public int getStyle() {
-		return 0;
+	public final int getFamily() {
+		return m_family;
+	}
+	
+	public final int getStyle() {
+		return m_style;
 	}
 
 	public final boolean isBold() {
-		return false;
+		return 0!=(getStyle() & BOLD);
 	}
 
 	public final boolean isItalic() {
-		return false;
+		return 0!=(getStyle() & ITALIC);
 	}
 
-	public static Typeface create(String familyName, int style) {
+	public final static Typeface create(String familyName,int style) {
+		//TODO:
 		return null;
 	}
 
-	public static Typeface create(Typeface family, int style) {
-		return null;
+	public final static Typeface create(Typeface family,int style) {
+		return new Typeface(style,family.getFamily());
 	}
 
-	public static Typeface defaultFromStyle(int style) {
-		return null;
+	public final static Typeface defaultFromStyle(int style) {
+		switch (style) {
+			case BOLD:			return DEFAULT_BOLD;
+			case ITALIC:		return DEFAULT_ITALIC;
+			case BOLD_ITALIC:	return DEFAULT_BOLD_ITALIC;
+			default:			return DEFAULT;
+		}
 	}
-
-	public static final Typeface 
-		DEFAULT				=new Typeface(),
-		DEFAULT_BOLD		=new Typeface(),
-		DEFAULT_ITALIC		=new Typeface(),
-		DEFAULT_BOLD_ITALIC	=new Typeface(),
-		SANS_SERIF			=new Typeface(),
-		SERIF				=new Typeface(),
-		MONOSPACE			=new Typeface();
 
 	public static final int 
-		NORMAL 				=0,
-		BOLD 				=1,
-		ITALIC 				=2,
-		BOLD_ITALIC 		=3;
+		NORMAL 				=0x00,
+		BOLD 				=0x01,
+		ITALIC 				=0x02,
+		BOLD_ITALIC 		=0x03;
+
+	public static final int
+		FAMILY_DEFAULT		=0,
+		FAMILY_SANS_SERIF	=1,
+		FAMILY_SERIF		=2,
+		FAMILY_MONOSPACE	=3;
+	
+	public static final Typeface 
+		DEFAULT				=new Typeface(NORMAL,FAMILY_DEFAULT),
+		DEFAULT_BOLD		=new Typeface(BOLD,FAMILY_DEFAULT),
+		DEFAULT_ITALIC		=new Typeface(ITALIC,FAMILY_DEFAULT),
+		DEFAULT_BOLD_ITALIC	=new Typeface(BOLD_ITALIC,FAMILY_DEFAULT),
+		SANS_SERIF			=new Typeface(NORMAL,FAMILY_SANS_SERIF),
+		SERIF				=new Typeface(NORMAL,FAMILY_SERIF),
+		MONOSPACE			=new Typeface(NORMAL,FAMILY_MONOSPACE);
+	
+	///////////////////////////////////////////// implementation
+	
+	private Typeface(int style,int family) {
+		m_style=style;
+		m_family=family;
+	}
+	
+	private int m_family;
+	private int m_style;
 }

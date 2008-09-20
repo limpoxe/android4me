@@ -15,6 +15,10 @@
  */
 package android.content.res;
 
+/**
+ * @author Dmitry Skiba
+ *
+ */
 public final class Configuration {
 
 	public float fontScale;

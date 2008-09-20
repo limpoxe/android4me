@@ -16,7 +16,7 @@
 package android4me.res;
 
 import java.io.IOException;
-import java.io.InputStream;
+import android4me.util.Cast;
 
 /**
  * @author Dmitry Skiba
@@ -25,59 +25,52 @@ import java.io.InputStream;
  * 
  * TODO:
  * - implement get()
- * - store all as one int[] chunk?
- * - hide constructor and return object from read()?
  *
  */
 public class StringBlock {
 	
 	/**
-	 * Type of string block chunk.
+	 * Reads whole (including chunk type) string block from stream.
+	 * Stream must be at the chunk type.
 	 */
-	public static final int CHUNK_TYPE=0x001C0001;
-	
-	/**
-	 * Reads string block from stream.
-	 * Stream must be positioned past the chunk type (at size).
-	 * In case of exception object retains previous state. 
-	 */
-	public void read(InputStream stream) throws IOException {
-		int chunkSize=ReadUtil.readInt(stream);
-		int stringCount=ReadUtil.readInt(stream);
-		int styleOffsetCount=ReadUtil.readInt(stream);
-		/*?*/ReadUtil.readInt(stream);
-		int stringsOffset=ReadUtil.readInt(stream);
-		int stylesOffset=ReadUtil.readInt(stream);
+	public static StringBlock read(IntReader reader) throws IOException {
+		ReadUtil.readCheckType(reader,CHUNK_TYPE);
+		int chunkSize=reader.readInt();
+		int stringCount=reader.readInt();
+		int styleOffsetCount=reader.readInt();
+		/*?*/reader.readInt();
+		int stringsOffset=reader.readInt();
+		int stylesOffset=reader.readInt();
 		
-		int[] stringOffsets=null;
-		int[] strings=null;
-		int[] styleOffsets=null;
-		int[] styles=null;
-		
-		stringOffsets=ReadUtil.readIntArray(stream,stringCount);
+		StringBlock block=new StringBlock();
+		block.m_stringOffsets=reader.readIntArray(stringCount);
 		if (styleOffsetCount!=0) {
-			styleOffsets=ReadUtil.readIntArray(stream,styleOffsetCount);
+			block.m_styleOffsets=reader.readIntArray(styleOffsetCount);
 		}
 		{
 			int size=((stylesOffset==0)?chunkSize:stylesOffset)-stringsOffset;
 			if ((size%4)!=0) {
-				throw new IOException("StringBlock: string data size is not multiple of 4 ("+size+").");
+				throw new IOException("String data size is not multiple of 4 ("+size+").");
 			}
-			strings=ReadUtil.readIntArray(stream,size/4);
+			block.m_strings=reader.readIntArray(size/4);
 		}
 		if (stylesOffset!=0) {
 			int size=(chunkSize-stylesOffset);
 			if ((size%4)!=0) {
-				throw new IOException("StringBlock: style data size is not multiple of 4 ("+size+").");
+				throw new IOException("Style data size is not multiple of 4 ("+size+").");
 			}
-			styles=ReadUtil.readIntArray(stream,size/4);
+			block.m_styles=reader.readIntArray(size/4);
 		}
 		
-		m_stringOffsets=stringOffsets;
-		m_strings=strings;
-		m_styleOffsets=styleOffsets;
-		m_styles=styles;
+		block.s=new String[block.getCount()];
+		for (int i=0;i!=block.getCount();++i) {
+			block.s[i]=block.getRaw(i);
+		}
+		
+		return block;	
 	}
+	
+	public String[] s;
 	
 	/**
 	 * Returns number of strings in block. 
@@ -93,7 +86,8 @@ public class StringBlock {
 	 * Returns null if index is invalid or object was not initialized.
 	 */
 	public String getRaw(int index) {
-		if (m_stringOffsets==null ||
+		if (index<0 ||
+			m_stringOffsets==null ||
 			index>=m_stringOffsets.length)
 		{
 			return null;
@@ -114,8 +108,8 @@ public class StringBlock {
 	 * Returns string with style information (if any).
 	 * Returns null if index is invalid or object was not initialized.
 	 */
-	public String get(int index) {
-		return getRaw(index);
+	public CharSequence get(int index) {
+		return Cast.toCharSequence(getRaw(index));
 	}
 
 	/**
@@ -173,8 +167,39 @@ public class StringBlock {
 		return html.toString();
 	}
 	
+	/**
+	 * Finds index of the string.
+	 * Returns -1 if the string was not found.
+	 */
+	public int find(String string) {
+		if (string==null) {
+			return -1;
+		}
+		for (int i=0;i!=m_stringOffsets.length;++i) {
+			int offset=m_stringOffsets[i];
+			int length=getShort(m_strings,offset);
+			if (length!=string.length()) {
+				continue;
+			}
+			int j=0;
+			for (;j!=length;++j) {
+				offset+=2;
+				if (string.charAt(j)!=getShort(m_strings,offset)) {
+					break;
+				}
+			}
+			if (j==length) {
+				return i;
+			}
+		}
+		return -1;
+	}
+	
 	///////////////////////////////////////////// implementation
 
+	private StringBlock() {
+	}
+	
 	/**
 	 * Returns style information - array of int triplets,
 	 * where in each triplet:
@@ -225,4 +250,6 @@ public class StringBlock {
 	private int[] m_strings;
 	private int[] m_styleOffsets;
 	private int[] m_styles;
+
+	private static final int CHUNK_TYPE=0x001C0001;
 }

@@ -193,16 +193,18 @@ abstract class AbstractStringBuilder {
         append0(s.substring(start, end).toString());
     }
 
-//    final void append0(CharSequence s, int start, int end) {
-//        if (s == null) {
-//            s = "null"; //$NON-NLS-1$
-//        }
-//        if (start < 0 || end < 0 || start > end || end > s.length()) {
-//            throw new IndexOutOfBoundsException();
-//        }
-//
-//        append0(s.subSequence(start, end).toString());
-//    }
+    final void append0(CharSequence s, int start, int end) {
+        if (s == null) {
+        	append0("null",start,end);
+        	return;
+            //s = "null"; //$NON-NLS-1$
+        }
+        if (start < 0 || end < 0 || start > end || end > s.length()) {
+            throw new IndexOutOfBoundsException();
+        }
+
+        append0(s.subSequence(start, end).toString());
+    }
     
     /**
      * Answers the number of characters this StringBuffer can hold without
@@ -397,16 +399,18 @@ abstract class AbstractStringBuilder {
         insert0(index, s.substring(start, end).toString());
     }
 
-//    final void insert0(int index, CharSequence s, int start, int end) {
-//        if (s == null) {
-//            s = "null"; //$NON-NLS-1$
-//        }
-//        if (index < 0 || index > count || start < 0 || end < 0 || start > end
-//                || end > s.length()) {
-//            throw new IndexOutOfBoundsException();
-//        }
-//        insert0(index, s.subSequence(start, end).toString());
-//    }
+    final void insert0(int index, CharSequence s, int start, int end) {
+        if (s == null) {
+        	insert0(index, "null", start, end);
+        	return;
+            //s = "null"; //$NON-NLS-1$
+        }
+        if (index < 0 || index > count || start < 0 || end < 0 || start > end
+                || end > s.length()) {
+            throw new IndexOutOfBoundsException();
+        }
+        insert0(index, s.subSequence(start, end).toString());
+    }
     
     /**
      * The current length of this object.
@@ -580,7 +584,7 @@ abstract class AbstractStringBuilder {
             }
 
             shared = true;
-            return new String(start, count - start, value);
+            return new String(value, start, count - start);
         }
         throw new StringIndexOutOfBoundsException(start);
     }
@@ -625,27 +629,30 @@ abstract class AbstractStringBuilder {
             return new String(value, 0, count);
         }
         shared = true;
-        return new String(0, count, value);
+        //TODO: As copying constructor is used, shared = true is probably should be shared = false? (check other places)
+        return new String(value, 0, count);
     }
 
-//    /**
-//     * Returns a <code>CharSequence</code> of the subsequence of this object
-//     * from the <code>start</code> index to the <code>start</code> index.
-//     * 
-//     * @param start
-//     *            The inclusive start index to begin the subsequence.
-//     * @param end
-//     *            The exclusive end index to end the subsequence.
-//     * @return A CharSequence containing the subsequence.
-//     * @throws IndexOutOfBoundsException
-//     *             if <code>start</code> is negative, greater than the current
-//     *             {@link #length()} or greater than <code>end</code>.
-//     * 
-//     * @since 1.4
-//     */
-//    public CharSequence subSequence(int start, int end) {
-//        return substring(start, end);
-//    }
+    /**
+     * Returns a <code>CharSequence</code> of the subsequence of this object
+     * from the <code>start</code> index to the <code>start</code> index.
+     * 
+     * @param start
+     *            The inclusive start index to begin the subsequence.
+     * @param end
+     *            The exclusive end index to end the subsequence.
+     * @return A CharSequence containing the subsequence.
+     * @throws IndexOutOfBoundsException
+     *             if <code>start</code> is negative, greater than the current
+     *             {@link #length()} or greater than <code>end</code>.
+     * 
+     * @since 1.4
+     */
+    public CharSequence subSequence(int start, int end) {
+    	//TODO: implement subSequence
+    	throw new RuntimeException("subSequence is not implemented.");
+        //return substring(start, end);
+    }
 
     /**
      * Searches in this StringBuffer for the first index of the specified

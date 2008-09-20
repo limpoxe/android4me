@@ -17,6 +17,10 @@ package android.graphics;
 
 import javolution.lang.Enum;
 
+/**
+ * @author Dmitry Skiba
+ *
+ */
 public class Paint {
 	
 	public static class FontMetricsInt {
@@ -76,33 +80,76 @@ public class Paint {
 			FILL,STROKE,FILL_AND_STROKE
 		};
 	}
+	
+	/////////////////////////////////// interface
 
-	public Paint() {}
-	public Paint(Paint paint) {}
+	public Paint() {
+		reset();
+	}
+	public Paint(Paint paint) {
+		if (paint!=null) {
+			set(paint);
+		} else {
+			reset();
+		}
+	}
 
-	public void reset() {}
+	public void reset() {
+		m_style=Style.FILL;
+		m_color=0;
+		m_typeface=Typeface.DEFAULT;
+	}
 
-	public void set(Paint src) {}
+	public void set(Paint src) {
+		//TODO
+	}
 
-	public Style getStyle() { return null; }
-	public void setStyle(Style style) {}
+	public Style getStyle() {
+		return m_style;
+	}
+	public void setStyle(Style style) {
+		if (style==null) {
+			throw new NullPointerException();
+		}
+		m_style=style;
+	}
 
-	public int getColor() { return 0; }
-	public void setColor(int i) {}
+	public int getColor() {
+		return m_color;
+	}
+	public void setColor(int color) {
+		m_color=color;
+	}
 
-	public int getAlpha() { return 0; }
-	public void setAlpha(int i) {}
+	public int getAlpha() {
+		return (m_color>>>24);
+	}
+	public void setAlpha(int alpha) {
+		m_color=(m_color & 0xFF000000) | (alpha<<24);
+	}
 
-	public void setARGB(int a, int r, int g, int b) {}
+	public void setARGB(int a,int r,int g,int b) {
+		m_color=((a & 0xFF)<<24) |
+			((r & 0xFF)<<16) | ((g & 0xFF)<<8) | (b & 0xFF);
+	}
 
-	public float getStrokeWidth() { return 0; }
-	public void setStrokeWidth(float f) {}
+//	public float getStrokeWidth() { return 0; }
+//	public void setStrokeWidth(float f) {}
 
-	public Typeface getTypeface() { return null; }
-	public Typeface setTypeface(Typeface typeface) { return null; }
+	public Typeface getTypeface() { 
+		return m_typeface;
+	}
+	public Typeface setTypeface(Typeface typeface) {
+		m_typeface=typeface;
+		return typeface;
+	}
 
-	public Align getTextAlign() { return null; }
-	public void setTextAlign(Align align) {}
+	public Align getTextAlign() { 
+		return m_align;
+	}
+	public void setTextAlign(Align align) {
+		m_align=align;
+	}
 
 	public float getTextSize() { return 0; }
 	public void setTextSize(float f) { }
@@ -128,4 +175,11 @@ public class Paint {
 	public int getTextWidths(CharSequence text, int start, int end, float widths[]) { return 0; }
 	public int getTextWidths(String text, int start, int end, float widths[]) { return 0; }
 	public int getTextWidths(String text, float widths[]) { return 0; }
+	
+	///////////////////////////////////////////// implementation
+	
+	private Style m_style;
+	private int m_color;
+	private Align m_align;
+	private Typeface m_typeface;
 }

@@ -16,7 +16,6 @@
 package android4me.res;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 
 /**
@@ -29,10 +28,25 @@ import java.util.ArrayList;
  * in ints.
  * 
  * TODO:
- * 	* content -> asset ?
+ *  * check that asset ids starts from 1 and ends at assetNames.getCount()
+ *  	(or should this check be in AssetManager?)
+ *  * read multiple packages
+ *  * remove Configuration and store raw values
+ *  * optimize reading (read byte chunk instead of per-byte)
  *
  */
 public class ARSCFile {
+	
+	/**
+	 */
+	public static class Pkge {
+		public ARSCFile file;
+		public int id;
+		public String name;
+		public StringBlock resourceNames;
+		public StringBlock assetNames;
+		public Asset[] assets;
+	}
 	
 	/**
 	 * 'id'-1 gives asset name index.
@@ -40,6 +54,7 @@ public class ARSCFile {
 	 * 'flags.length' is total resource count in asset.
 	 */
 	public static class Asset {
+		public Pkge pkge;
 		public int id;
 		public int[] flags;
 		public Content[] contents;
@@ -48,7 +63,7 @@ public class ARSCFile {
 	/**
 	 */
 	public static class Content {
-		public int assetID;
+		public Asset asset;
 		public Configuration configuration;
 		public int[] offsets;
 		public int[] data;
@@ -72,97 +87,25 @@ public class ARSCFile {
 	
 	/////////////////////////////////// data
 	
-	public int packageID;
-	public String packageName;
-	public StringBlock stringValues;
-	public StringBlock stringIDs;
-	public StringBlock assetNames;
-	public Asset[] assets;
+	public StringBlock strings;
+	public Pkge[] pkges;
 	
 	/////////////////////////////////// creator
 	
-	public static ARSCFile read(InputStream stream) throws IOException {
+	public static ARSCFile read(IntReader reader) throws IOException {
 		ARSCFile arsc=new ARSCFile();
-		ReadUtil.readCheckType(stream,ARSC_CHUNK_TYPE);
-		/*size*/ReadUtil.readInt(stream);
-		/*package count?*/ReadUtil.readInt(stream);
+		ReadUtil.readCheckType(reader,ARSC_CHUNK_TYPE);
+		/*size*/reader.readInt();
+		int groupCount=reader.readInt();
 		
-		ReadUtil.readCheckType(stream,StringBlock.CHUNK_TYPE);
-		arsc.stringValues=new StringBlock();
-		arsc.stringValues.read(stream);
-		
-		ReadUtil.readCheckType(stream,PACKAGE_CHUNK_TYPE);
-		/*size*/ReadUtil.readInt(stream);
-		arsc.packageID=ReadUtil.readInt(stream);
-		{
-			final int nameLength=128;
-			StringBuilder name=new StringBuilder(16);
-			int i=0;
-			for (;i!=nameLength;) {
-				++i;
-				int ch=ReadUtil.readShort(stream);
-				if (ch==0) {
-					break;
-				}
-				name.append((char)ch);
-			}
-			stream.skip((nameLength-i)*2);
-			stream.skip((nameLength*2)%4);
-			arsc.packageName=name.toString();
+		if (groupCount!=1) {
+			throw new IOException("Only one package per file is supported.");
 		}
 		
-		/*signature?*/ReadUtil.readInt(stream);
-		/*assetNameCount*/ReadUtil.readInt(stream);
-		/*stringIDOffset*/ReadUtil.readInt(stream);
-		/*stringIDCount*/ReadUtil.readInt(stream);
-		
-		ReadUtil.readCheckType(stream,StringBlock.CHUNK_TYPE);
-		arsc.assetNames=new StringBlock();
-		arsc.assetNames.read(stream);
-		
-		ReadUtil.readCheckType(stream,StringBlock.CHUNK_TYPE);
-		arsc.stringIDs=new StringBlock();
-		arsc.stringIDs.read(stream);
-		
-		ArrayList assets=new ArrayList();
-		ArrayList contents=new ArrayList();
-		while (stream.available()!=0) {
-			int chunkType=ReadUtil.readInt(stream);
-			int chunkSize=ReadUtil.readInt(stream);
-			if (chunkType==ASSET_CHUNK_TYPE) {
-				assets.add(readasset(stream));
-			} else if (chunkType==CONTENT_CHUNK_TYPE) {
-				contents.add(readContent(stream,chunkSize));
-			} else {
-				throw new IOException("Unexpected chunk type ("+chunkType+").");
-			}
-		}
-		
-		arsc.assets=new Asset[assets.size()];
-		int contentLeft=contents.size();
-		for (int i=0;i!=assets.size();++i) {
-			Asset asset=(Asset)assets.get(i);
-			int contentCount=0;
-			for (int j=0;j!=contents.size();++j) {
-				Content content=(Content)contents.get(j);
-				if (content.assetID==asset.id) {
-					contentCount+=1;
-				}
-			}
-			asset.contents=new Content[contentCount];
-			for (int j=0,k=0;j!=contents.size();++j) {
-				Content content=(Content)contents.get(j);
-				if (content.assetID==asset.id) {
-					asset.contents[k++]=content;
-					contentLeft-=1;
-				}
-			}
-			arsc.assets[i]=asset;
-		}
-		if (contentLeft!=0) {
-			throw new IOException("Problem in mapping contents to assets ("+contentLeft+" left).");
-		}
-		
+		arsc.strings=StringBlock.read(reader);
+		arsc.pkges=new Pkge[1];
+		arsc.pkges[0]=readPackage(arsc,reader);
+
 		return arsc;
 	}
 	
@@ -171,35 +114,111 @@ public class ARSCFile {
 	private ARSCFile() {
 	}
 	
-	private static Asset readasset(InputStream stream) throws IOException {
+	private static Pkge readPackage(ARSCFile file,IntReader reader) throws IOException {
+		Pkge pkge=new Pkge();
+		pkge.file=file;
+		
+		ReadUtil.readCheckType(reader,PACKAGE_CHUNK_TYPE);
+		/*size*/reader.skipInt();
+		pkge.id=reader.readInt();
+		{
+			final int nameLength=128;
+			StringBuilder name=new StringBuilder(16);
+			int i=0;
+			for (;i!=nameLength;) {
+				++i;
+				int ch=reader.readShort();
+				if (ch==0) {
+					break;
+				}
+				name.append((char)ch);
+			}
+			reader.skip((nameLength-i)*2);
+			reader.skip((nameLength*2)%4);
+			pkge.name=name.toString();
+		}
+		
+		/*signature?*/reader.skipInt();
+		int assetCount=reader.readInt();
+		/*idNamesOffset*/reader.skipInt();
+		/*idNamesCount*/reader.skipInt();
+		
+		pkge.assetNames=StringBlock.read(reader);
+		pkge.resourceNames=StringBlock.read(reader);
+		pkge.assets=new Asset[assetCount];
+
+		ArrayList contents=new ArrayList();
+		int assetsRead=0;
+		Asset currentAsset=null;
+		while (reader.available()!=0) {
+			int chunkType=reader.readInt();
+			if (chunkType!=CONTENT_CHUNK_TYPE) {
+				if (currentAsset!=null) {
+					currentAsset.contents=new Content[contents.size()];
+					contents.toArray(currentAsset.contents);
+					contents.clear();
+				}
+			}
+			if (chunkType==ASSET_CHUNK_TYPE) {
+				currentAsset=readAsset(reader,pkge);
+				pkge.assets[assetsRead]=currentAsset;
+				assetsRead+=1;
+			} else if (chunkType==CONTENT_CHUNK_TYPE) {
+				if (currentAsset==null) {
+					throw new IOException("Invalid chunk sequence: content read before asset.");
+				}
+				contents.add(readContent(reader,currentAsset));
+			} else {
+				throw new IOException("Unexpected chunk type ("+chunkType+").");
+			}
+		}
+		if (currentAsset!=null) {
+			currentAsset.contents=new Content[contents.size()];
+			contents.toArray(currentAsset.contents);
+			contents.clear();
+		}		
+		if (assetsRead!=assetCount) {
+			throw new IOException("Not all assets where read ("+(assetCount-assetsRead)+" left).");
+		}
+		return pkge;
+	}
+	
+	private static Asset readAsset(IntReader reader,Pkge group) throws IOException {
+		/*chunkSize*/reader.skipInt();
 		Asset asset=new Asset();
-		asset.id=ReadUtil.readInt(stream);
-		int count=ReadUtil.readInt(stream);
-		asset.flags=ReadUtil.readIntArray(stream,count);
+		asset.pkge=group;
+		asset.id=reader.readInt();
+		int count=reader.readInt();
+		asset.flags=reader.readIntArray(count);
 		return asset;		
 	}
 	
-	private static Content readContent(InputStream stream,int chunkSize) throws IOException {
+	private static Content readContent(IntReader reader,Asset asset) throws IOException {
+		int chunkSize=reader.readInt();
 		Content content=new Content();
-		content.assetID=ReadUtil.readInt(stream);
-		int offsetCount=ReadUtil.readInt(stream);
-		int dataOffset=ReadUtil.readInt(stream);
-		content.configuration=readConfiguration(stream);
-		content.offsets=ReadUtil.readIntArray(stream,offsetCount);
+		int assetID=reader.readInt();
+		if (assetID!=asset.id) {
+			throw new IOException("Content id ("+assetID+") "+"doesn't match asset id ("+asset.id+").");
+		}
+		content.asset=asset;
+		int offsetCount=reader.readInt();
+		int dataOffset=reader.readInt();
+		content.configuration=readConfiguration(reader);
+		content.offsets=reader.readIntArray(offsetCount);
 		int dataSize=(chunkSize-dataOffset);
 		if ((dataSize%4)!=0) {
 			throw new IOException("Content data size ("+dataSize+") is not multiple of 4.");
 		}
-		content.data=ReadUtil.readIntArray(stream,dataSize/4);
+		content.data=reader.readIntArray(dataSize/4);
 		return content;
 	}
 	
-	private static Configuration readConfiguration(InputStream stream) throws IOException {
-		int size=ReadUtil.readInt(stream);
+	private static Configuration readConfiguration(IntReader reader) throws IOException {
+		int size=reader.readInt();
 		if (size!=0x1C) {
 			throw new IOException("Bad content configuration size ("+size+").");
 		}
-		int[] elements=ReadUtil.readIntArray(stream,size/4-1);
+		int[] elements=reader.readIntArray(size/4-1);
 		Configuration configuration=new Configuration();
 		for (int i=0;i!=elements.length;++i) {
 			int element=elements[i];
