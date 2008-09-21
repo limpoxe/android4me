@@ -36,13 +36,13 @@ public abstract class Context {
 
 	public abstract Theme getTheme();
 
-	public abstract void setTheme(int i);
+	public abstract void setTheme(int themeID);
 	
 	public abstract Looper getMainLooper();
 	
 	public abstract String getPackageName();
 
-	public abstract Object getSystemService(String s);
+	public abstract Object getSystemService(String name);
 
 	public abstract SharedPreferences getSharedPreferences(String name,int mode);
 	

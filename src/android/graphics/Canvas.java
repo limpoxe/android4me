@@ -23,6 +23,10 @@ import javax.microedition.lcdui.Graphics;
  */
 public class Canvas {
 
+	public Canvas(Graphics graphics) {
+		m_graphics=graphics;
+	}
+	
 	public Canvas() {}
 	public Canvas(Bitmap bitmap) {}
 

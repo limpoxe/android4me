@@ -29,12 +29,12 @@ public class Resources {
 	/////////////////////////////////// Theme
 	
 	public final class Theme {
-//		public void applyStyle(int resid, boolean force) {
-//		}
-//
-//		public void setTo(Theme other) {
-//		}
-//
+		public void applyStyle(int resid, boolean force) {
+		}
+
+		public void setTo(Theme other) {
+		}
+
 		public TypedArray obtainStyledAttributes(int[] styleable) {
 			return null;
 		}
@@ -164,6 +164,24 @@ public class Resources {
 		return -1;				
 	}
 	
+	public XmlResourceParser getLayout(int id)
+		throws NotFoundException
+	{
+		//TODO:!
+		return null;
+	}
+
+	public Drawable getDrawable(int id)
+		throws NotFoundException
+	{
+		//TODO:!
+		return null;
+	}
+	
+	public Theme newTheme() {
+		return new Theme();
+	}
+	
 	
 	public String getResourceName(int id)
 		throws NotFoundException
@@ -183,6 +201,14 @@ public class Resources {
 		return null;
 	}
 	
+	public TypedArray obtainAttributes(AttributeSet set,int[] styleableIDs) {
+		return obtainStyledAttributes(
+			0,
+			(AXmlResourceParser)set,
+			0,
+			0,
+			styleableIDs);
+	}
 	
 	public TypedArray obtainStyledAttributes(
 			int themeID,
