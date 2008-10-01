@@ -1,3 +1,4 @@
 #summary Raw list of limitations.
 
+  * No Instrumentation
   * No configuration changes
