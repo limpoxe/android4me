@@ -1,0 +1,3 @@
+#summary Raw list of limitations.
+
+  * No configuration changes
