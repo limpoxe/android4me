@@ -1,0 +1,7 @@
+# Details #
+
+There are things in Android's graphics, that just can't be easily implemented.
+One of them is translucency. In android you can set global alpha, which will affect all operations. This allows nice effects.
+In plain J2ME you have translucency only for image drawing. With Nokia UI classes (Nokia + SE handsets) you can draw translucent primitives like lines. But not text. The only way you can have translucent text is to draw it by yourself. Two possibilities here: (1) bitmap fonts, (2) ttf rendering. (1) is widely used. But consider 3 font sizes + combinations of bold & italics. Say each letter is 10x10. 256 letters. So we need 160x160 image for each combination. With 4 byte per pixel each image will consume 100Kb of memory. Hence 900Kb for fonts. That 900Kb will also be in JAR. Aactually font images can be PNGs which allows nice compression, but in application font image need to be array of ints, since we need to tweak translucency for each pixel. (2) seems more space efficient, but is totally unexplored. There is one J2ME-adapted library for TTF rendering, TTME. But it heavily uses doubles, and seems to be not optimized at all.
+
+Anyways, as measurement shows, it is feasible to implement graphics by myself, i.e. implement all drawing methods to draw into array of ints. This solves many problems.
